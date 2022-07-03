@@ -21,6 +21,8 @@ if count == 1:
     players = db['players']
     player_stats = db['player_stats']
     team_stats = db['team_stats']
+    game_stats = db['game_stats']
+    dbstats = db['db_stats']
 
     #Convert object to dictionary, encode to bson and insert
     # team1 = Team("Rockets", "Houston", "Some Guy", 35)
@@ -82,18 +84,51 @@ if count == 1:
     #     player_stats.insert_many(stat_list.json()['response'])
     #     time.sleep(0.25)
 
+    def return_id(e):
+        return int(e["id"])
+
     #get stats for teams
-    # team_list = teams.find({"nbaFranchise": True})
-    # for t in team_list:
-    #     stat_list = api.NBA.get_statistics_by_team_and_seasion(t["id"], 2021)
-    #     print("Insert stats for " + t['name'])
-    #     team_stats.insert_many(stat_list.json()["response"])
+    # team_list = players.find({"leagues.standard.active":True
+    # })
+    # teamlistlist = list(team_list)
+    # teamlistlist.sort(key=return_id)
+    # print(str(len(teamlistlist)))
+    # for t in teamlistlist:
+        #stat_list = api.NBA.get_statistics_by_team_and_seasion(t["id"], 2021)
+        # print("Insert stats for " + t['firstname'])
+        # print(t["id"])
+        pass
+        #team_stats.insert_many(stat_list.json()["response"])
     # time.sleep(0.25)
 
-    res = api.NBA.get_seasons()
-    print(res.headers['X-RateLimit-requests-Remaining'])
+   # res = api.NBA.check_remaining_requests()
 
-    
+    game_list = games.find({"league":"standard"})
+    gamelistlist = list(game_list)
+    gamelistlist.sort(key=return_id)
+    remaining = api.NBA.check_remaining_requests()["remaining"]
+    print("Remaining: " + str(remaining))
+    if len(gamelistlist) > remaining:
+        gamelistReduced = gamelistlist[0:remaining - 100]
+        count = 1
+        for g in gamelistReduced:
+            remaining -= 1
+            count += 1
+            print("remain: " +str(remaining))
+            print("count: " + str(count))
+            if count < remaining - 100:
+                #gamestat = api.NBA.get_statistics_by_game(g["id"])
+                gameplaceholder = gamestat.json()['response']
+                gameobj = {"id": g["id"]}
+                gameobj["team_1"] = gameplaceholder[0]
+                gameobj["team_2"] = gameplaceholder[1]
+                print(gameobj)
+                #game_stats.insert_one(gameobj)
+                dbstats.insert_one({"message": "last gamestat added ID: " + str(g["id"]) + " Count: " + str(count)})
+                
+
+
+            
 
 
 
