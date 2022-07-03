@@ -86,6 +86,7 @@ if count == 1:
 
     def return_id(e):
         return int(e["id"])
+   
 
     #get stats for teams
     # team_list = players.find({"leagues.standard.active":True
@@ -103,13 +104,18 @@ if count == 1:
 
    # res = api.NBA.check_remaining_requests()
 
+    db_stat_list = list(dbstats.find({}))
+    last_db_stat = db_stat_list.pop()
+    print(last_db_stat)
+
+
     game_list = games.find({"league":"standard"})
     gamelistlist = list(game_list)
     gamelistlist.sort(key=return_id)
-    remaining = api.NBA.check_remaining_requests()["remaining"]
+    # remaining = api.NBA.check_remaining_requests()["remaining"]
     print("Remaining: " + str(remaining))
     if len(gamelistlist) > remaining:
-        gamelistReduced = gamelistlist[0:remaining - 100]
+        gamelistReduced = gamelistlist[2380: 2380 + remaining - 100]
         count = 1
         for g in gamelistReduced:
             remaining -= 1
@@ -117,13 +123,13 @@ if count == 1:
             print("remain: " +str(remaining))
             print("count: " + str(count))
             if count < remaining - 100:
-                #gamestat = api.NBA.get_statistics_by_game(g["id"])
+                # gamestat = api.NBA.get_statistics_by_game(g["id"])
                 gameplaceholder = gamestat.json()['response']
                 gameobj = {"id": g["id"]}
                 gameobj["team_1"] = gameplaceholder[0]
                 gameobj["team_2"] = gameplaceholder[1]
                 print(gameobj)
-                #game_stats.insert_one(gameobj)
+                game_stats.insert_one(gameobj)
                 dbstats.insert_one({"message": "last gamestat added ID: " + str(g["id"]) + " Count: " + str(count)})
                 
 
