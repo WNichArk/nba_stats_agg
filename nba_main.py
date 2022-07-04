@@ -1,6 +1,6 @@
 from os import stat_result
 import apicalls as api
-from bson import encode
+from bson import ObjectId, encode
 from team import Team
 from mongo_connect_test import database
 import pymongo
@@ -109,16 +109,27 @@ def get_last_db_entry():
     db_stat_list = list(dbstats.find({}))
     last_db_stat = db_stat_list.pop()
     print(last_db_stat)
+    return last_db_stat["game_id"]
 
     #get game stats. relies on indexes of gamelistReduced based on last game_id entered into dbstats
-def get_game_stats():
+def get_game_stats(add_index, start_id = 0):
     game_list = games.find({"league":"standard"})
     gamelistlist = list(game_list)
     gamelistlist.sort(key=return_id)
     remaining = api.NBA.check_remaining_requests()["remaining"]
     print("Remaining: " + str(remaining))
     if len(gamelistlist) > remaining:
-        gamelistReduced = gamelistlist[2380: 2380 + remaining - 100]
+        if start_id < 1:
+            last_game = list(dbstats.find({})).pop()["game_id"]
+        else:
+            last_game = start_id
+        restart_item = next((i for i in gamelistlist if i["id"] == last_game), None)
+        if add_index < 1:
+            add_index = 1
+        restart_index = gamelistlist.index(restart_item) + add_index
+        print("Restart index: " + str(restart_index))
+        print("Continue?")
+        gamelistReduced = gamelistlist[restart_index: restart_index + remaining - 100]
         count = 1
         for g in gamelistReduced:
             remaining -= 1
@@ -128,20 +139,60 @@ def get_game_stats():
             if count < remaining - 100:
                 gamestat = api.NBA.get_statistics_by_game(g["id"])
                 gameplaceholder = gamestat.json()['response']
-                gameobj = {"id": g["id"]}
-                gameobj["team_1"] = gameplaceholder[0]
-                gameobj["team_2"] = gameplaceholder[1]
-                print(gameobj)
-                game_stats.insert_one(gameobj)
-                dbstats.insert_one({"message": "last gamestat added ID: " + str(g["id"]) + " Count: " + str(count), "game_id":g["id"]})
-                
+                try:
+                    gameobj = {"id": g["id"]}
+                    gameobj["team_1"] = gameplaceholder[0]
+                    gameobj["team_2"] = gameplaceholder[1]
+                    print(gameobj)
+                    game_stats.insert_one(gameobj)
+                    dbstats.insert_one({"message": "last gamestat added ID: " + str(g["id"]) + " Count: " + str(count), "game_id":g["id"]})
+                except:
+                    get_game_stats(add_index + 1)
+
+
+
+def clean_list():
+    gamelist = list(games.find({}))
+    game_ids = [i["id"] for i in gamelist]
+    #print(game_ids)
+    for id in game_ids:
+        if game_ids.count(id) > 1:
+            print("Duplicate Id: " + str(id))
+    gamestatlist = list(game_stats.find({}))
+    game_stat_ids = [i["id"] for i in gamestatlist]
+    for id in game_stat_ids:
+        if game_stat_ids.count(id) > 1:
+            print("Duplicate game_stat_id: " + str(id))
+    missing_game_stats = db["missing_game_stats"]
+    for id in game_ids:
+        if id not in game_stat_ids:
+            print("Adding game: " + str(id))
+            missing_game_stats.insert_one({"missing_game_id": id})
+    count_deleted = 0
+    # for id in game_stat_ids:
+    #     if game_stat_ids.count(id) > 1:
+    #         dupe = game_stats.find_one({"id": id})
+    #         dupe_id = dupe["_id"]
+    #         objId = ObjectId(dupe_id)
+    #         print(dupe_id)
+    #         dupelist = game_stats.find({"$and":[{"id": id}, {"_id": {"$ne" : objId}}]})
+    #         print("Dupe Id: " + str(dupe["_id"]))
+    #         print("-----")
+    #         duple = list(dupelist)
+    #         for i in duple:
+    #             game_stats.delete_one(i)
+
+
+
+    #print(game_stat_ids)
+
 
 count = 1
 if count == 1:
     #print(call_test())
-
-            
-
+    # get_last_db_entry()
+    # get_game_stats(0, 9261)         
+    clean_list()
 
 
     
